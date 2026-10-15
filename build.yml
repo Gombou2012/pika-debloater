@@ -1,0 +1,41 @@
+name: Build Pika Debloater
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'Build-PikaDebloater.ps1'
+      - '.github/workflows/build.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout your Pika Debloater repository
+        uses: actions/checkout@v4
+
+      - name: Fetch upstream open-source WinUtil
+        shell: pwsh
+        run: git clone --depth 1 https://github.com/ChrisTitusTech/winutil.git _winutil
+
+      - name: Compile the branded complete utility
+        shell: pwsh
+        run: ./Build-PikaDebloater.ps1 -UpstreamDirectory ./_winutil -OutputDirectory . -Repository '${{ github.repository }}'
+
+      - name: Publish generated scripts back to main
+        shell: pwsh
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -- PikaDebloater.ps1 run.ps1 LICENSE-WINUTIL
+          git diff --cached --quiet
+          if ($LASTEXITCODE -ne 0) {
+            git commit -m 'Build Pika Debloater from upstream WinUtil'
+            git push
+          } else {
+            Write-Host 'No changes to publish.'
+          }
